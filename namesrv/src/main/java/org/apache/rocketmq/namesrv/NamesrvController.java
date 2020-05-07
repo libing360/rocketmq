@@ -75,15 +75,17 @@ public class NamesrvController {
 
     public boolean initialize() {
 
+        //加载KV配置表,hashmap实现，用 readWriteLock解决并发问题
         this.kvConfigManager.load();
-
+        //netty 远程服务；boss connect 线程 1个，IO线程3个，
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
-
+        //远程的工作线程：8个
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
 
         this.registerProcessor();
 
+        //延迟5s，每10s扫描 不活跃的 broker
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -92,6 +94,7 @@ public class NamesrvController {
             }
         }, 5, 10, TimeUnit.SECONDS);
 
+        //每隔10s打印 kv配置表
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
